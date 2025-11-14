@@ -10,7 +10,25 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    networks:
+      - notifications-network
 
+
+  mongodb:
+    image: mongo:6.0
+    container_name: notifications-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - notifications-network
+
+  # Nossa aplicação Node.js
   app:
     build:
       context: .
@@ -21,12 +39,21 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://redis:6379
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/notifications?authSource=admin
     depends_on:
       - redis
+      - mongodb
     volumes:
       - .:/app
       - /app/node_modules
     restart: unless-stopped
+    networks:
+      - notifications-network
 
 volumes:
   redis_data:
+  mongodb_data:
+
+networks:
+  notifications-network:
+    driver: bridge
