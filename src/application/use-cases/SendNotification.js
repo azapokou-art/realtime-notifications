@@ -2,7 +2,15 @@ import { Notification } from '../../domain/Notification.js';
 import { NotificationTypes, NotificationPriorities } from '../../domain/NotificationTypes.js';
 
 export class SendNotificationUseCase {
+  /**
+   * @param {import('../repositories/NotificationRepository.js').NotificationRepository} notificationRepository
+   * @param {import('../services/WebSocketService.js').WebSocketService} websocketService
+   */
   constructor(notificationRepository, websocketService) {
+    if (!notificationRepository || !websocketService) {
+      throw new Error('NotificationRepository e WebSocketService são obrigatórios');
+    }
+    
     this.notificationRepository = notificationRepository;
     this.websocketService = websocketService;
   }
@@ -22,11 +30,13 @@ export class SendNotificationUseCase {
 
       const savedNotification = await this.notificationRepository.save(notification);
 
-      await this.websocketService.broadcastToUser(
-        recipient, 
-        'notification:new',
-        savedNotification.toJSON()
-      );
+      if (await this.websocketService.isUserConnected(recipient)) {
+        await this.websocketService.broadcastToUser(
+          recipient, 
+          'notification:new',
+          savedNotification.toJSON()
+        );
+      }
 
       return {
         success: true,
@@ -35,7 +45,8 @@ export class SendNotificationUseCase {
       };
 
     } catch (error) {
-
+      console.error('Erro ao enviar notificação:', error);
+      
       return {
         success: false,
         error: error.message,
