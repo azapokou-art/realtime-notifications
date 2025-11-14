@@ -1,10 +1,22 @@
+import { NotificationType, NotificationPriority, NotificationTypes, NotificationPriorities } from './NotificationTypes.js';
+
 export class Notification {
-  constructor({ id, message, type, recipient, priority = 'NORMAL', read = false, createdAt = new Date() }) {
+  constructor({ 
+    id, 
+    message, 
+    type, 
+    recipient, 
+    priority = NotificationPriorities.NORMAL, 
+    read = false, 
+    createdAt = new Date() 
+  }) {
     this.id = id;
     this.message = message;
-    this.type = type;
+    
+    this.type = type instanceof NotificationType ? type : new NotificationType(type);
+    this.priority = priority instanceof NotificationPriority ? priority : new NotificationPriority(priority);
+    
     this.recipient = recipient;
-    this.priority = priority;
     this.read = read;
     this.createdAt = createdAt;
     this.expiresAt = null;
@@ -13,23 +25,15 @@ export class Notification {
   }
 
   validate() {
-    
+
     if (!this.message || this.message.trim().length === 0) {
       throw new Error('Mensagem da notificação é obrigatória');
-    }
-
-    if (!this.type) {
-      throw new Error('Tipo da notificação é obrigatório');
     }
 
     if (!this.recipient) {
       throw new Error('Destinatário da notificação é obrigatório');
     }
 
-    const validPriorities = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
-    if (!validPriorities.includes(this.priority)) {
-      throw new Error('Prioridade da notificação é inválida');
-    }
   }
 
   markAsRead() {
@@ -53,6 +57,19 @@ export class Notification {
   }
 
   isDeletable() {
-    return this.type !== 'SYSTEM';
+    return !this.type.equals(NotificationTypes.SYSTEM);
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      message: this.message,
+      type: this.type.toString(),
+      priority: this.priority.toString(),
+      recipient: this.recipient,
+      read: this.read,
+      createdAt: this.createdAt,
+      expiresAt: this.expiresAt
+    };
   }
 }
