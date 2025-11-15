@@ -1,0 +1,152 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { createServer } from 'http';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+import { mongoDBConnection } from './infrastructure/database/mongodb/MongoDBConnection.js';
+import { SocketioService } from './infrastructure/websocket/SocketioService.js';
+
+import { MongoNotificationRepository } from './infrastructure/database/mongodb/repositories/MongoNotificationRepository.js';
+import { SendNotificationUseCase } from './application/use-cases/SendNotification.js';
+
+class Application {
+  constructor() {
+    this.app = express();
+    this.server = createServer(this.app);
+    this.port = process.env.PORT || 3000;
+    
+
+    this.websocketService = new SocketioService();
+    this.notificationRepository = new MongoNotificationRepository();
+    
+    this.setupMiddlewares();
+    this.setupRoutes();
+    this.setupWebSocket();
+  }
+
+  setupMiddlewares() {
+    this.app.use(helmet());
+    this.app.use(cors());
+    this.app.use(express.json());
+
+    this.app.get('/health', (req, res) => {
+      res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        service: 'Realtime Notifications API'
+      });
+    });
+  }
+
+  setupRoutes() {
+
+    this.app.post('/notifications', async (req, res) => {
+      try {
+        const { message, type, recipient, priority } = req.body;
+        
+        const useCase = new SendNotificationUseCase(
+          this.notificationRepository,
+          this.websocketService
+        );
+
+        const result = await useCase.execute({
+          message,
+          type,
+          recipient,
+          priority
+        });
+
+        if (result.success) {
+          res.status(201).json(result);
+        } else {
+          res.status(400).json(result);
+        }
+      } catch (error) {
+        console.error('Erro ao enviar notificacao:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Erro interno do servidor'
+        });
+      }
+    });
+
+    this.app.get('/notifications/:recipient', async (req, res) => {
+      try {
+        const { recipient } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+
+        const notifications = await this.notificationRepository.findByRecipient(
+          recipient, 
+          { limit: parseInt(limit), offset: parseInt(offset) }
+        );
+
+        res.json({
+          success: true,
+          data: notifications.map(notification => notification.toJSON()),
+          pagination: {
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+          }
+        });
+      } catch (error) {
+        console.error('Erro ao buscar notificacoes:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Erro interno do servidor'
+        });
+      }
+    });
+  }
+
+  setupWebSocket() {
+    this.websocketService.initialize(this.server);
+  }
+
+  async start() {
+    try {
+
+      await mongoDBConnection.connect(process.env.MONGODB_URL);
+
+      this.server.listen(this.port, () => {
+        console.log(`Servidor rodando na porta ${this.port}`);
+        console.log(`Health check disponivel em: http://localhost:${this.port}/health`);
+        console.log(`WebSocket inicializado`);
+      });
+    } catch (error) {
+      console.error('Falha ao iniciar aplicacao:', error);
+      process.exit(1);
+    }
+  }
+
+  async stop() {
+    try {
+      await mongoDBConnection.disconnect();
+      this.server.close();
+      console.log('Aplicacao encerrada');
+    } catch (error) {
+      console.error('Erro ao encerrar aplicacao:', error);
+    }
+  }
+}
+
+const application = new Application();
+
+process.on('SIGINT', async () => {
+  console.log('Recebido SIGINT, encerrando aplicacao...');
+  await application.stop();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Recebido SIGTERM, encerrando aplicacao...');
+  await application.stop();
+  process.exit(0);
+});
+
+application.start().catch(error => {
+  console.error('Falha critica ao iniciar aplicacao:', error);
+  process.exit(1);
+});
