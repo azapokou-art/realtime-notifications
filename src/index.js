@@ -33,6 +33,8 @@ class Application {
     this.app.use(cors());
     this.app.use(express.json());
 
+    this.app.use(express.static('public'));
+
     this.app.get('/health', (req, res) => {
       res.json({ 
         status: 'OK', 
@@ -40,7 +42,10 @@ class Application {
         service: 'Realtime Notifications API'
       });
     });
-  }
+    this.app.get('/', (req, res) => {
+    res.sendFile(process.cwd() + '/public/index.html');
+  });
+}
 
   setupRoutes() {
 
