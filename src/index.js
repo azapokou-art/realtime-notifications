@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
+import { redisPubSub } from './infrastructure/redis/RedisPubSub.js';
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ class Application {
     this.server = createServer(this.app);
     this.port = process.env.PORT || 3000;
     
-
+    this.redisPubSub = redisPubSub;
     this.websocketService = new SocketioService();
     this.notificationRepository = new MongoNotificationRepository();
     
@@ -109,11 +110,15 @@ class Application {
     try {
 
       await mongoDBConnection.connect(process.env.MONGODB_URL);
+      await this.redisPubSub.connect(process.env.REDIS_URL);
+
+      await this.setupRedisSubscribers();
 
       this.server.listen(this.port, () => {
         console.log(`Servidor rodando na porta ${this.port}`);
         console.log(`Health check disponivel em: http://localhost:${this.port}/health`);
         console.log(`WebSocket inicializado`);
+        console.log(`Redis Pub/Sub conectado`);
       });
     } catch (error) {
       console.error('Falha ao iniciar aplicacao:', error);
@@ -130,7 +135,21 @@ class Application {
       console.error('Erro ao encerrar aplicacao:', error);
     }
   }
+
+async setupRedisSubscribers() {
+  await this.redisPubSub.subscribe('notifications:global', (message) => {
+    console.log('Notificacao global recebida:', message);
+    this.websocketService.broadcast('notification:global', message);
+  });
+
+  await this.redisPubSub.subscribe('notifications:user:*', (message, channel) => {
+    const userId = channel.split(':')[2];
+    console.log(`Notificacao para usuario ${userId}:`, message);
+    this.websocketService.sendToUser(userId, 'notification:personal', message);
+  });
 }
+}
+
 
 const application = new Application();
 
