@@ -13,6 +13,7 @@ export class SendNotificationUseCase {
     
     this.notificationRepository = notificationRepository;
     this.websocketService = websocketService;
+    this.redisPubSub = redisPubSub;
   }
 
   async execute({ message, type, recipient, priority = 'NORMAL', options = {} }) {
@@ -37,6 +38,12 @@ export class SendNotificationUseCase {
           savedNotification.toJSON()
         );
       }
+
+      await this.redisPubSub.publish('notifications:user:' + recipient, {
+      type: 'NEW_NOTIFICATION',
+      notification: savedNotification.toJSON(),
+      timestamp: new Date().toISOString()
+      });
 
       return {
         success: true,
