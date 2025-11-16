@@ -50,7 +50,8 @@ class Application {
         
         const useCase = new SendNotificationUseCase(
           this.notificationRepository,
-          this.websocketService
+          this.websocketService,
+          this.redisPubSub
         );
 
         const result = await useCase.execute({
