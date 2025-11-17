@@ -4,8 +4,16 @@ import helmet from 'helmet';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 import { redisPubSub } from './infrastructure/redis/RedisPubSub.js';
+import client from 'prom-client';
 
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ timeout: 5000 });
 dotenv.config();
+const notificationsCounter = new client.Counter({
+  name: 'notifications_total',
+  help: 'Total de notificações enviadas',
+  labelNames: ['type', 'priority']
+});
 
 import { mongoDBConnection } from './infrastructure/database/mongodb/MongoDBConnection.js';
 import { SocketioService } from './infrastructure/websocket/SocketioService.js';
@@ -29,20 +37,44 @@ class Application {
   }
 
   setupMiddlewares() {
-    this.app.use(helmet());
-    this.app.use(cors());
-    this.app.use(express.json());
+ 
+  this.app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.socket.io"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "ws:", "wss:", "http://localhost:3000", "https://cdn.socket.io"]
+      },
+    },
+    crossOriginEmbedderPolicy: false
+  }));
 
-    this.app.use(express.static('public'));
+  this.app.get('/metrics', async (req, res) => {
+    try {
+      res.set('Content-Type', client.register.contentType);
+      const metrics = await client.register.metrics();
+      res.end(metrics);
+    } catch (error) {
+      res.status(500).end(error);
+    }
+  });
+  
+  this.app.use(cors());
+  this.app.use(express.json());
 
-    this.app.get('/health', (req, res) => {
-      res.json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        service: 'Realtime Notifications API'
-      });
+  this.app.use(express.static('public'));
+
+  this.app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      service: 'Realtime Notifications API'
     });
-    this.app.get('/', (req, res) => {
+  });
+
+  this.app.get('/', (req, res) => {
     res.sendFile(process.cwd() + '/public/index.html');
   });
 }
@@ -66,19 +98,24 @@ class Application {
           priority
         });
 
-        if (result.success) {
-          res.status(201).json(result);
-        } else {
-          res.status(400).json(result);
-        }
-      } catch (error) {
-        console.error('Erro ao enviar notificacao:', error);
-        res.status(500).json({
-          success: false,
-          error: 'Erro interno do servidor'
-        });
-      }
+         if (result.success) {
+           notificationsCounter.inc({ type: type, priority: priority });
+  console.log('Métrica incrementada:', type, priority);
+}
+
+    if (result.success) {
+      res.status(201).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Erro ao enviar notificacao:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
     });
+  }
+});
 
     this.app.get('/notifications/:recipient', async (req, res) => {
       try {

@@ -280,8 +280,9 @@
             </div>
         </div>
     </div>
-
-    <script>
+    
+ <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
     class NotificationClient {
         constructor() {
             this.socket = null;
@@ -338,8 +339,9 @@
             }
 
             try {
+ 
                 this.socket = io('http://localhost:3000', {
-                    transports: ['websocket']
+                    transports: ['websocket', 'polling']
                 });
 
                 this.socket.on('connect', () => {
@@ -347,8 +349,7 @@
                     this.updateStatus(this.wsStatus, true);
                     this.connectBtn.textContent = 'Desconectar';
                     this.sendBtn.disabled = false;
-                    
-                    
+
                     this.socket.emit('user:identify', this.userId);
                     
                     this.log('WebSocket conectado - Usuário: ' + this.userId, 'success');
@@ -379,6 +380,7 @@
 
                 this.socket.on('connect_error', (error) => {
                     this.log('Erro de conexão WebSocket: ' + error.message, 'error');
+                    this.updateStatus(this.wsStatus, false);
                 });
 
             } catch (error) {
@@ -395,7 +397,7 @@
             this.updateStatus(this.wsStatus, false);
             this.connectBtn.textContent = 'Conectar WebSocket';
             this.sendBtn.disabled = true;
-            this.log('WebSocket desconectado manualmente');
+            this.log('🔌 WebSocket desconectado manualmente');
         }
 
         async sendNotification() {
@@ -405,11 +407,6 @@
 
             if (!message) {
                 alert('Por favor, digite uma mensagem');
-                return;
-            }
-
-            if (!this.userId) {
-                alert('Por favor, defina um ID de usuário');
                 return;
             }
 
@@ -435,7 +432,6 @@
                 if (result.success) {
                     this.log('Notificação enviada com sucesso!', 'success');
                     this.messageInput.value = '';
-
                     this.addNotification(result.notification, 'personal');
                 } else {
                     throw new Error(result.error || 'Erro desconhecido');
@@ -463,7 +459,6 @@
                 <div class="notification-message">
                     <strong>${data.type}:</strong> ${data.message}
                 </div>
-                ${data.id ? `<div style="font-size: 0.7em; color: #95a5a6; margin-top: 5px;">ID: ${data.id}</div>` : ''}
             `;
 
             this.notificationsContainer.insertBefore(notificationEl, this.notificationsContainer.firstChild);
@@ -504,5 +499,7 @@
         window.notificationClient = new NotificationClient();
     });
 </script>
+</body>
+</html>
 </body>
 </html>
