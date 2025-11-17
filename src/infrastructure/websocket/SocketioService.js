@@ -7,16 +7,19 @@ export class SocketioService {
   }
 
   initialize(server) {
-    this.io = new Server(server, {
-      cors: {
-        origin: process.env.WEBSOCKET_CORS_ORIGIN || "http://localhost:3000",
-        methods: ["GET", "POST"]
-      }
-    });
+  this.io = new Server(server, {
+    cors: {
+      origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+      methods: ["GET", "POST"],
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"]
+    },
+    transports: ['websocket', 'polling']
+  });
 
-    this.setupEventHandlers();
-    console.log('WebSocket Service inicializado');
-  }
+  this.setupEventHandlers();
+  console.log('WebSocket Service inicializado');
+}
 
   setupEventHandlers() {
     this.io.on('connection', (socket) => {
@@ -126,6 +129,47 @@ export class SocketioService {
   async getConnectedUsers() {
     return Array.from(this.connectedUsers.keys());
   }
+
+setupNativeWebSocket(server) {
+  const WebSocket = require('ws');
+  this.nativeWebSocket = new WebSocket.Server({ server });
+
+  this.nativeWebSocket.on('connection', (ws) => {
+    console.log('Cliente WebSocket nativo conectado');
+
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message);
+        
+        if (data.event === 'user:identify' && data.userId) {
+          this.registerUserConnection(data.userId, 'native-' + Date.now());
+          console.log(`Usuário ${data.userId} identificado via WebSocket nativo`);
+        }
+      } catch (error) {
+        console.error('Erro ao processar mensagem WebSocket nativo:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      console.log('Cliente WebSocket nativo desconectado');
+    });
+  });
+
+  console.log('WebSocket nativo inicializado');
+}
+
+sendToNativeWebSocket(userId, event, data) {
+  if (!this.nativeWebSocket) return;
+
+  this.nativeWebSocket.clients.forEach((client) => {
+    if (client.readyState === require('ws').OPEN) {
+      client.send(JSON.stringify({
+        event: event,
+        data: data
+      }));
+    }
+  });
+}
 
   getSocketInstance() {
     return this.io;

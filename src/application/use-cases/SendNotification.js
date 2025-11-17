@@ -1,14 +1,9 @@
 import { Notification } from '../../domain/Notification.js';
-import { NotificationTypes, NotificationPriorities } from '../../domain/NotificationTypes.js';
 
 export class SendNotificationUseCase {
-  /**
-   * @param {import('../repositories/NotificationRepository.js').NotificationRepository} notificationRepository
-   * @param {import('../services/WebSocketService.js').WebSocketService} websocketService
-   */
-  constructor(notificationRepository, websocketService) {
-    if (!notificationRepository || !websocketService) {
-      throw new Error('NotificationRepository e WebSocketService são obrigatórios');
+  constructor(notificationRepository, websocketService, redisPubSub) {
+    if (!notificationRepository || !websocketService || !redisPubSub) {
+      throw new Error('NotificationRepository, WebSocketService e RedisPubSub são obrigatórios');
     }
     
     this.notificationRepository = notificationRepository;
@@ -18,9 +13,10 @@ export class SendNotificationUseCase {
 
   async execute({ message, type, recipient, priority = 'NORMAL', options = {} }) {
     try {
-    
+      
       this.validateInput({ message, type, recipient, priority });
 
+      
       const notification = new Notification({
         message: message.trim(),
         type,
@@ -29,8 +25,10 @@ export class SendNotificationUseCase {
         ...options
       });
 
+      
       const savedNotification = await this.notificationRepository.save(notification);
 
+     
       if (await this.websocketService.isUserConnected(recipient)) {
         await this.websocketService.broadcastToUser(
           recipient, 
@@ -39,10 +37,11 @@ export class SendNotificationUseCase {
         );
       }
 
+     
       await this.redisPubSub.publish('notifications:user:' + recipient, {
-      type: 'NEW_NOTIFICATION',
-      notification: savedNotification.toJSON(),
-      timestamp: new Date().toISOString()
+        type: 'NEW_NOTIFICATION',
+        notification: savedNotification.toJSON(),
+        timestamp: new Date().toISOString()
       });
 
       return {
