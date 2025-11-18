@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-app
-  namespace: default
+  namespace: notification-system
   labels:
     app: notification-app
     version: v1
