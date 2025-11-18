@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: notification-app-hpa
-  namespace: default
+  namespace: notification-system
   labels:
     app: notification-app
 spec:
