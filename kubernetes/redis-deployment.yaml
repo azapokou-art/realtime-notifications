@@ -40,9 +40,16 @@ spec:
             memory: "512Mi"
             cpu: "250m"
         securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1001
           runAsGroup: 1001
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
         livenessProbe:
           exec:
             command: ["redis-cli", "ping"]
