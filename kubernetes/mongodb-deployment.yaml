@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mongodb
-  namespace: default
+  namespace: notification-system
   labels:
     app: mongodb
     database: nosql
