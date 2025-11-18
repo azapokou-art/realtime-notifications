@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-frontend
+  namespace: notification-system
+  labels:
+    app: notification-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-frontend
+  template:
+    metadata:
+      labels:
+        app: notification-frontend
+    spec:
+      containers:
+      - name: notification-frontend
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: frontend-html
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 101
+          runAsGroup: 101
+      volumes:
+      - name: frontend-html
+        configMap:
+          name: frontend-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-frontend
+  namespace: notification-system
+spec:
+  selector:
+    app: notification-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP
