@@ -23,10 +23,10 @@ spec:
         fsGroup: 2000
       containers:
       - name: notification-app
-        image: your-registry/notification-app:latest
+        image: nginxinc/nginx-unprivileged:alpine
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           runAsGroup: 1000

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-pvc
-  namespace: default
+  namespace: notification-system
   labels:
     app: redis
     storage: cache

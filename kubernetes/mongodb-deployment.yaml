@@ -34,7 +34,7 @@ spec:
               key: password
         volumeMounts:
         - name: mongodb-storage
-          mountPath: /data/db
+          mountPath: /tmp/mongodb
         resources:
           requests:
             memory: "512Mi"
