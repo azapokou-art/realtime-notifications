@@ -9,7 +9,7 @@ set -euo pipefail
 #   CLUSTER_NAME=rn-dev IMAGE=myregistry/realtime-notifications:latest ./dev-up.sh
 
 CLUSTER_NAME=${CLUSTER_NAME:-rn-dev}
-IMAGE=${IMAGE:-myregistry/realtime-notifications:latest}
+IMAGE=${IMAGE:-realtime-notifications:local}
 DOCKERFILE_PATH=${DOCKERFILE_PATH:-docker/Dockerfile}
 K8S_DIR=${K8S_DIR:-kubernetes}
 NAMESPACE=${NAMESPACE:-notification-system}

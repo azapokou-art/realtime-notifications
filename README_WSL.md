@@ -50,7 +50,7 @@ chmod +x dev-up.sh
 
 Por padrão o script usa as variáveis:
 - `CLUSTER_NAME` (padrão: `rn-dev`)
-- `IMAGE` (padrão: `myregistry/realtime-notifications:latest`) — o script builda essa imagem localmente e a carrega no cluster kind.
+-- `IMAGE` (padrão: `realtime-notifications:local`) — o script builda essa imagem localmente e a carrega no cluster kind (não é necessário push para um registry remoto).
 
 Exemplo com variáveis customizadas:
 
