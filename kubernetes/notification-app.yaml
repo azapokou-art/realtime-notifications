@@ -23,7 +23,8 @@ spec:
         fsGroup: 2000
       containers:
       - name: notification-app
-        image: myregistry/realtime-notifications:latest
+        image: realtime-notifications:local
+        imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: false
