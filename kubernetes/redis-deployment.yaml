@@ -21,14 +21,7 @@ spec:
         image: redis:7.2-alpine
         ports:
         - containerPort: 6379
-  command: ["redis-server"]
-  args: ["--appendonly", "yes"]
-        env:
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: redis-secrets
-              key: password
+        command: ["redis-server", "--appendonly", "yes"]
         volumeMounts:
         - name: redis-storage
           mountPath: /data
