@@ -45,7 +45,16 @@ else
 fi
 
 # Storage class / PVs / PVCs
-for f in storageclass.yaml local-pv.yaml mongodb-pv-fixed.yaml novo-pv.yaml; do
+# Apply storageclass only if it does not already exist (provisioner/volumeBindingMode are immutable)
+if [ -f "${K8S_DIR}/storageclass.yaml" ]; then
+  if kubectl get storageclass standard >/dev/null 2>&1; then
+    echo "[dev-up] storageclass 'standard' already exists -> skipping apply to avoid immutable field errors"
+  else
+    kubectl apply -f "${K8S_DIR}/storageclass.yaml" || true
+  fi
+fi
+
+for f in local-pv.yaml mongodb-pv-fixed.yaml novo-pv.yaml; do
   if [ -f "${K8S_DIR}/$f" ]; then
     kubectl apply -f "${K8S_DIR}/$f" || true
   fi
