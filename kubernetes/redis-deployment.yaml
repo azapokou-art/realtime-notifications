@@ -16,6 +16,13 @@ spec:
       labels:
         app: redis
     spec:
+      initContainers:
+      - name: init-redis-permissions
+        image: busybox:1.36
+        command: ["sh", "-c", "chown -R 1001:1001 /data || true"]
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
       containers:
       - name: redis
         image: redis:7.2-alpine
@@ -55,5 +62,4 @@ spec:
           periodSeconds: 5
       volumes:
       - name: redis-storage
-        persistentVolumeClaim:
-          claimName: redis-pvc
+        emptyDir: {}

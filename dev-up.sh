@@ -69,9 +69,9 @@ kubectl apply -f "${K8S_DIR}/mongodb-service.yaml"
 kubectl apply -f "${K8S_DIR}/redis-deployment.yaml"
 kubectl apply -f "${K8S_DIR}/redis-service.yaml"
 
-echo "[dev-up] waiting for mongodb and redis pods to be ready (timeout 300s)"
-kubectl wait --for=condition=ready pod -l app=mongodb --timeout=300s -n "${NAMESPACE}" || true
-kubectl wait --for=condition=ready pod -l app=redis --timeout=300s -n "${NAMESPACE}" || true
+echo "[dev-up] waiting for mongodb and redis pods to be ready (timeout 60s)"
+kubectl wait --for=condition=ready pod -l app=mongodb --timeout=60s -n "${NAMESPACE}" || true
+kubectl wait --for=condition=ready pod -l app=redis --timeout=60s -n "${NAMESPACE}" || true
 
 # Configs and application
 kubectl apply -f "${K8S_DIR}/notification-config.yaml"

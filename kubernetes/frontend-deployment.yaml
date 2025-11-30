@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: notification-frontend
-        image: nginx:alpine
+        image: nginxinc/nginx-unprivileged:alpine
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
