@@ -96,6 +96,68 @@ kubectl -n notification-system port-forward svc/notification-frontend 8081:80
 # depois abra: http://localhost:8081/
 ```
 
+Acessando a partir do Windows (WSL2)
+----------------------------------
+
+Por padrão os exemplos acima criam um port-forward ligado apenas a localhost dentro da sua sessão WSL. Para facilitar o acesso a partir do Windows (Postman, navegador, etc.) há duas opções:
+
+1) Executar um port-forward que escute em 0.0.0.0 (recomendado para dev local):
+
+```bash
+# liga o service do backend para a porta 8080 e aceita conexões de outras interfaces
+kubectl -n notification-system port-forward --address 0.0.0.0 svc/notification-service 8080:80
+
+# frontend
+kubectl -n notification-system port-forward --address 0.0.0.0 svc/notification-frontend 8081:80
+```
+
+2) Usar o helper criado no repositório que inicia ambos os port-forwards em background e grava os PIDs:
+
+```bash
+bash scripts/port-forward-windows.sh
+# Acessar do Windows em:
+# Backend:  http://localhost:8080
+# Frontend: http://localhost:8081
+```
+
+Para parar os port-forwards iniciados pelo helper:
+
+```bash
+# dentro da raiz do repo (onde o helper gravou .port-forward-pids)
+kill $(awk '{print $1}' .port-forward-pids) $(awk '{print $2}' .port-forward-pids) || true
+rm -f .port-forward-pids
+```
+
+Dica: se por algum motivo `localhost` no Windows não funcionar com WSL2, descubra o IP da sua distro WSL (`wsl hostname -I`) e tente `http://<WSL_IP>:8080`.
+
+Executar o `dev-up.sh` com port-forward automático
+-------------------------------------------------
+
+O script `dev-up.sh` agora tem suporte opcional para iniciar o helper de port-forward automaticamente. Para usá-lo:
+
+```bash
+PORT_FORWARD=true bash ./dev-up.sh
+```
+
+Ou exporte a variável no seu shell:
+
+```bash
+export PORT_FORWARD=true
+./dev-up.sh
+```
+
+Observação sobre KUBECONFIG
+--------------------------
+
+O `dev-up.sh` grava o kubeconfig do cluster kind em `~/.kube/config` e exporta `KUBECONFIG` durante a execução do script para garantir que os `kubectl` subsequentes funcionem. Se quiser que a variável `KUBECONFIG` seja visível em novas shells, adicione ao seu `~/.bashrc` ou `~/.profile`:
+
+```bash
+export KUBECONFIG=~/.kube/config
+```
+
+Isso facilita usar `kubectl` a partir de novas abas/terminais sem precisar exportar novamente.
+
+
 Se der problemas, cole os logs:
 
 ```bash

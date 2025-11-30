@@ -13,6 +13,8 @@ IMAGE=${IMAGE:-realtime-notifications:local}
 DOCKERFILE_PATH=${DOCKERFILE_PATH:-docker/Dockerfile}
 K8S_DIR=${K8S_DIR:-kubernetes}
 NAMESPACE=${NAMESPACE:-notification-system}
+PORT_FORWARD=${PORT_FORWARD:-false}
+PORT_FORWARD_SCRIPT=${PORT_FORWARD_SCRIPT:-"scripts/port-forward-windows.sh"}
 
 echo "[dev-up] cluster=${CLUSTER_NAME} image=${IMAGE} k8s=${K8S_DIR} namespace=${NAMESPACE}"
 
@@ -26,6 +28,15 @@ else
   echo "[dev-up] creating kind cluster '${CLUSTER_NAME}'..."
   kind create cluster --name "${CLUSTER_NAME}"
 fi
+
+# Ensure kubeconfig is written for this kind cluster and export it for subsequent kubectl calls
+# We write to the user's ~/.kube/config so other shells can pick it up too.
+KUBECONFIG_FILE=${KUBECONFIG_FILE:-"${HOME}/.kube/config"}
+mkdir -p "$(dirname "${KUBECONFIG_FILE}")"
+echo "[dev-up] writing kubeconfig for kind cluster '${CLUSTER_NAME}' to ${KUBECONFIG_FILE}"
+kind get kubeconfig --name "${CLUSTER_NAME}" > "${KUBECONFIG_FILE}"
+export KUBECONFIG="${KUBECONFIG_FILE}"
+echo "[dev-up] exported KUBECONFIG=${KUBECONFIG_FILE} (this export is for the duration of this script; to persist it add 'export KUBECONFIG=~/.kube/config' to your shell rc)"
 
 echo "[dev-up] building Docker image ${IMAGE} using ${DOCKERFILE_PATH}"
 docker build -t "${IMAGE}" -f "${DOCKERFILE_PATH}" .
@@ -97,5 +108,18 @@ echo "To access the API locally run (port-forward):"
 echo "  kubectl port-forward svc/notification-service 8080:80 -n ${NAMESPACE}"
 echo "To access the frontend (if deployed via ConfigMap/nginx):"
 echo "  kubectl port-forward svc/notification-frontend 8081:80 -n ${NAMESPACE}"
+
+if [ "${PORT_FORWARD}" = "true" ]; then
+  echo "[dev-up] PORT_FORWARD=true -> starting ${PORT_FORWARD_SCRIPT} to expose services to Windows"
+  if [ -f "${PORT_FORWARD_SCRIPT}" ]; then
+    # run the helper; it backgrounds kubectl port-forward and stores PIDs
+    bash "${PORT_FORWARD_SCRIPT}" || echo "[dev-up] warning: failed to launch ${PORT_FORWARD_SCRIPT}"
+    echo "[dev-up] port-forward helper started (check .port-forward-pids in repo root)"
+  else
+    echo "[dev-up] error: ${PORT_FORWARD_SCRIPT} not found; skipping port-forward"
+  fi
+else
+  echo "[dev-up] PORT_FORWARD not enabled (set PORT_FORWARD=true to auto-start port-forwards)"
+fi
 
 echo "[dev-up] finished"
