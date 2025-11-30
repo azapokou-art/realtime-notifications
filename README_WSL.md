@@ -119,6 +119,33 @@ Para remover o cluster criado pelo kind:
 kind delete cluster --name rn-dev
 ```
 
+Reset do ambiente (WSL)
+
+Se quiser limpar tudo e começar do zero (clusters kind, imagens e opcionalmente `docker system prune`), use o script `reset-dev.sh` criado para WSL.
+
+Aviso: esta operação é destrutiva. Leia as mensagens e confirme quando solicitado.
+
+Uso básico (na raiz do repositório, dentro do WSL):
+
+```bash
+chmod +x reset-dev.sh
+./reset-dev.sh
+```
+
+Comportamento padrão:
+- Remove clusters `kind` cujo nome começa com `rn-` ou `dev-` (seguro para não apagar clusters não relacionados).
+- Remove imagens locais usadas pelo projeto (`realtime-notifications:local` e `myregistry/realtime-notifications:latest`).
+
+Opções:
+- `./reset-dev.sh --all` — deleta todos os clusters `kind` (use com cautela).
+- O script pergunta explicitamente para executar `docker system prune -a --volumes -f`; digite `PRUNE` para confirmar essa etapa.
+
+Depois do reset, reconstrua e reprovisione o cluster com:
+
+```bash
+./dev-up.sh
+```
+
 Próximos passos recomendados
 
 1. Secrets: mover `kubernetes/secrets.yaml` para fora do repositório e adicionar `kubernetes/secrets.example.yaml` com placeholders; usar SealedSecrets/SOPS/ExternalSecrets para gerenciamento.
